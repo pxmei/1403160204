@@ -107,3 +107,4 @@ int main(int argc, char *argv[])
                <<grade.at(i).cour1<<"\t"<<grade.at(i).cour2;
     }
 }
+
