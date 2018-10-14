@@ -60,19 +60,19 @@ int main(int argc, char *argv[])
     argc=argc;//消除对未使用变量的警告
     student stu1,stu2,stu3,stu4;//定义四个学生，录入数据
     stu1.num=1403130209;
-    stu1.name="鲁智深";
+    stu1.name="lzs鲁智深";
     stu1.cour1=80;
     stu1.cour2=72;
     stu2.num=1403140101;
-    stu2.name="林冲";
+    stu2.name="lc林冲";
     stu2.cour1=82;
     stu2.cour2=76;
     stu3.num=1403140102;
-    stu3.name="宋江";
+    stu3.name="sj宋江";
     stu3.cour1=76;
     stu3.cour2=85;
     stu4.num=1403140103;
-    stu4.name="武松";
+    stu4.name="ws武松";
     stu4.cour1=88;
     stu4.cour2=80;
     QList<student> grade;//定义一个list，将四个类放入其中
