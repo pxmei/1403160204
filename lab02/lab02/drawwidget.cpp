@@ -4,7 +4,8 @@
 #include <QMessageBox>
 #include <QDialog>
 #include <QFileDialog>
-
+#include <QDateTime>
+#include <QString>
 
 DrawWidget::DrawWidget(QWidget *parent) : QWidget(parent)
 {
@@ -15,6 +16,9 @@ DrawWidget::DrawWidget(QWidget *parent) : QWidget(parent)
     pix = new QPixmap(size());      //此QPixmap对象用来准备随时接受绘制的内容
     pix->fill (BACKGROUND_COLOR);          //填充背景色为白色
     setMinimumSize (600, 400);      //设置绘制区窗体的最小尺寸
+    pic=new QPixmap(size());
+    pic->fill(Qt::transparent);
+    pic->load(filename);
 
 }
 
@@ -22,6 +26,7 @@ DrawWidget::~DrawWidget()
 {
     // 注意：一定要删除pix指针
     delete pix;
+    delete pic;
 }
 
 void DrawWidget::setStyle (int s)
@@ -40,7 +45,7 @@ void DrawWidget::setColor (QColor c)
 {
     color = c;
 }
-
+//鼠标按下事件
 void DrawWidget::mousePressEvent (QMouseEvent *e)
 {
     if(e->button() == Qt::LeftButton){
@@ -48,7 +53,7 @@ void DrawWidget::mousePressEvent (QMouseEvent *e)
         canDraw = true;
     }
 }
-
+//鼠标停留事件
 void DrawWidget::mouseMoveEvent (QMouseEvent *e)
 {
 
@@ -71,8 +76,7 @@ void DrawWidget::mouseMoveEvent (QMouseEvent *e)
         }
     }
 }
-
-
+//鼠标移走事件
 void DrawWidget::mouseReleaseEvent(QMouseEvent *e)
 {
     if (e->button() == Qt::LeftButton){
@@ -87,13 +91,21 @@ void DrawWidget::mouseReleaseEvent(QMouseEvent *e)
 
 
 }
+//绘图事件
 void DrawWidget::paintEvent (QPaintEvent *)
 {
+    //绘图设备是Qwidget对象时，Qpainter仅能在paintEvent()函数
+    //或是由paintEvent()函数调用的函数内使用
     QPainter painter(this);
-    painter.drawPixmap (QPoint(0, 0), *pix);
+    QRect imgrect=QRect(0,0,this->width(),this->height());
+//    QRect imgrect=QRect(this->width()/4,this->height()/4,this->width()/2,this->height()/2);
+    QImage pic1=pix->toImage();
+    QImage pic2=pic->toImage();
+    painter.drawImage(0,0,pic1);
+    painter.drawImage(imgrect, pic2);
 }
 
-
+//窗口大小变化事件
 void DrawWidget::resizeEvent (QResizeEvent *event)
 {
     if(height () > pix->height () || width() > pix->width ())
@@ -108,37 +120,30 @@ void DrawWidget::resizeEvent (QResizeEvent *event)
     QWidget::resizeEvent(event);
 }
 
-
+//清除页面事件
 void DrawWidget::clear ()
 {
     // 清除绘图内容，简单的用背景色填充整个画布即可
     pix->fill(BACKGROUND_COLOR);
     update ();
+    //调用update()后进入paintEvent()函数
 }
+
 
 //选择图片
 void DrawWidget::choseimage()
 {
-    QString filename =QFileDialog::getOpenFileName( this,tr("选择图片文件"), "/user","Images (*.png *.xpm *.jpg)");   //文件只显示.png .xpm .jpg格式
-       if(filename.isEmpty())
-               return;
-       else
-       {
-           QImage img;
-           if(!(img.load(filename))) //加载图像
-           {
-               QMessageBox::information(this, tr("打开图像失败"),tr("打开图像失败!"));
-               return;
-           }
-       }
-       pix->load(filename);
-       QPixmap *newP = new QPixmap(size());
-       newP->fill (BACKGROUND_COLOR);
-       QPainter p(newP);
-       p.drawPixmap (QPoint((width()-pix->width())/2,(height()-pix->width())/2), *pix);
-       delete pix;
-       pix = newP;
-       update();
+    filename=QFileDialog::getOpenFileName( this,tr("选择图片文件"), "/user","Images (*.png *.xpm *.jpg)");   //文件只显示.png .xpm .jpg格式
+    pic->load(filename);
+}
+
+//保存文件
+void DrawWidget::save()
+{
+    QDateTime current_date_time =QDateTime::currentDateTime();     //当前时间作为文件名(避免覆盖)
+    QString currentDate =current_date_time.toString("yyyy-MM-dd_hh-mm-ss");
+    QString fileName=tr("E:/lab02_%1.png").arg(currentDate);
+    this->pix->save(fileName);         //保存文件
 }
 
 void DrawWidget::setShapeType(ST::ShapeType type)
@@ -224,16 +229,25 @@ QRectF DrawWidget::textRect(const QPointF ptStart, const QPointF ptEnd, QString 
 void DrawWidget::drawShape(const QPointF ptStart,const QPointF ptEnd,const ST::ShapeType drawType)
 {
     QPainter painter;
-
+    //Qpen多用于绘制轮廓线
     QPen pen;
+    //Qt::PenStyle是枚举类型enum
+    //枚举便于记忆和使用，意义明确
+    //相当于一个接口，封装了内部的数据类型，更加的安全可靠
     pen.setStyle ((Qt::PenStyle)style);
     pen.setWidth (weight);
     pen.setColor (color);
 
     painter.begin (pix);
+    pen.setCapStyle(Qt::RoundCap);//画笔笔帽
+    pen.setJoinStyle(Qt::RoundJoin);//画笔连接方式
     // 抗锯齿必须在painter激活后，也就是绘制对象确定后设置
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen (pen);
+
+    /**************************绘图工作*************************************/
+
+    //在选择比较多的情况下，switch...case代码执行效率更高
     switch (drawType) {
     case ST::Rectangle:
         painter.drawRect(QRectF(ptStart,ptEnd));
@@ -243,7 +257,7 @@ void DrawWidget::drawShape(const QPointF ptStart,const QPointF ptEnd,const ST::S
         break;
     case ST::Line:
         painter.drawLine(ptStart,ptEnd);
-        break;
+        break;  
     case ST::Triangle:{
         //三角形的三个顶点
         QPointF point1( (ptStart.x()+ptEnd.x())/2,ptStart.y());
@@ -252,12 +266,10 @@ void DrawWidget::drawShape(const QPointF ptStart,const QPointF ptEnd,const ST::S
 
         QVector<QPointF> points;
         points<<point1<<point2<<point3;
-
-        // 画多边形
         painter.drawPolygon(points);
+
     }
         break;
-
     case ST::Diamond:{
         //菱形的四个顶点
         QPointF point4((ptStart.x()+ptEnd.x())/2,ptStart.y());
@@ -269,8 +281,6 @@ void DrawWidget::drawShape(const QPointF ptStart,const QPointF ptEnd,const ST::S
         painter.drawPolygon(points1);
     }
         break;
-
-
     case ST::Text:{
 
         if(drawnText.isEmpty()){

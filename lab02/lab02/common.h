@@ -17,6 +17,5 @@ enum ShapeType {
 
 #define BACKGROUND_COLOR Qt::white
 #define FOREGROUND_COLOR Qt::red
-
-
 #endif // COMMON_H
+
